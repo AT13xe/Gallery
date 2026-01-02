@@ -5,8 +5,13 @@ import Image from "next/image"
 import { Fancybox } from "@fancyapps/ui"
 import "@fancyapps/ui/dist/fancybox/fancybox.css"
 
+/* =======================
+   ① 类型统一定义
+======================= */
+export type GalleryType = "horizontal" | "vertical" | "Genshin Impact" | "avatar" | "mia" | "しとね"
+
 interface ImageGalleryProps {
-  type: "horizontal" | "vertical"
+  type: GalleryType
 }
 
 interface ImageItem {
@@ -16,83 +21,119 @@ interface ImageItem {
 
 declare global {
   interface Window {
-    __picCounts?: { h: number; v: number }
+    __picCounts?: {
+      h: number
+      v: number
+      ys: number
+      tx: number
+      mia: number
+      a: number
+    }
   }
+}
+
+/* =======================
+   ② 类型配置中心（核心）
+======================= */
+const TYPE_CONFIG: Record<
+  GalleryType,
+  {
+    baseUrl: string
+    countKey: "h" | "v" | "ys" | "tx" | "mia" | "a"
+    aspect?: string
+  }
+> = {
+  horizontal: {
+    baseUrl: "https://img.at13xe.top/ri/h",
+    countKey: "h",
+  },
+  vertical: {
+    baseUrl: "https://img.at13xe.top/ri/v",
+    countKey: "v",
+  },
+  Genshin Impact: {
+    baseUrl: "https://img.at13xe.top/ri/ys",
+    countKey: "ys",
+  },
+  avatar: {
+    baseUrl: "https://img.at13xe.top/ri/tx",
+    countKey: "tx",
+  },
+  mia: {
+    baseUrl: "https://img.at13xe.top/ri/mia",
+    countKey: "mia",
+  },
+  しとね: {
+    baseUrl: "https://img.at13xe.top/ri/a",
+    countKey: "a",
+  },
 }
 
 export function ImageGallery({ type }: ImageGalleryProps) {
   const [images, setImages] = useState<ImageItem[]>([])
   const [page, setPage] = useState(1)
   const [loading, setLoading] = useState(false)
-  const [maxCount, setMaxCount] = useState<number>(0)
+  const [maxCount, setMaxCount] = useState(0)
   const [countsLoaded, setCountsLoaded] = useState(false)
+
   const observerRef = useRef<IntersectionObserver | null>(null)
   const loadMoreRef = useRef<HTMLDivElement>(null)
-  const initialLoadDone = useRef(false)
-  const containerRef = useRef<HTMLDivElement>(null)
   const galleryContainerRef = useRef<HTMLDivElement>(null)
+  const initialLoadDone = useRef(false)
 
   const IMAGES_PER_PAGE = 20
-  const baseUrl = type === "horizontal" ? "https://pic.acofork.com/ri/h" : "https://pic.acofork.com/ri/v"
+  const config = TYPE_CONFIG[type]
 
+  /* =======================
+     ③ 列数响应式
+  ======================= */
   const getColumnCount = () => {
     if (typeof window === "undefined") return 3
-    const width = window.innerWidth
-    if (width < 768) return 2
-    if (width < 1024) return 3
+    if (window.innerWidth < 768) return 2
+    if (window.innerWidth < 1024) return 3
     return 4
   }
 
+  /* =======================
+     ④ 获取最大数量
+  ======================= */
   useEffect(() => {
-    const fetchMaxCount = () => {
-      const script = document.createElement("script")
-      script.src = "https://pic.acofork.com/random.js"
-      script.async = true
-
-      script.onload = () => {
-        const scriptContent = `
-          (function() {
-            var counts = window.__picCounts || {"h":979,"v":3596};
-            window.__picCounts = counts;
-          })();
-        `
-        const inlineScript = document.createElement("script")
-        inlineScript.textContent = scriptContent
-        document.head.appendChild(inlineScript)
-
-        setTimeout(() => {
-          const counts = window.__picCounts || { h: 979, v: 3596 }
-          const count = type === "horizontal" ? counts.h : counts.v
-          setMaxCount(count)
-          setCountsLoaded(true)
-        }, 100)
-      }
-
-      script.onerror = () => {
-        console.error("Failed to load random.js, using fallback counts")
-        const fallbackCount = type === "horizontal" ? 979 : 3596
-        setMaxCount(fallbackCount)
-        setCountsLoaded(true)
-      }
-
-      document.head.appendChild(script)
-    }
+    const fallbackCounts = { h: 788, v: 995, ys: 744, tx: 893, mia:248, a:611 }
 
     if (window.__picCounts) {
-      const count = type === "horizontal" ? window.__picCounts.h : window.__picCounts.v
-      setMaxCount(count)
+      setMaxCount(window.__picCounts[config.countKey] ?? fallbackCounts[config.countKey])
       setCountsLoaded(true)
-    } else {
-      fetchMaxCount()
+      return
     }
-  }, [type])
 
+    const script = document.createElement("script")
+    script.src = "https://img.at13xe.top/random.js"
+    script.async = true
+
+    script.onload = () => {
+      setTimeout(() => {
+        const counts = window.__picCounts || fallbackCounts
+        setMaxCount(counts[config.countKey])
+        setCountsLoaded(true)
+      }, 100)
+    }
+
+    script.onerror = () => {
+      setMaxCount(fallbackCounts[config.countKey])
+      setCountsLoaded(true)
+    }
+
+    document.head.appendChild(script)
+  }, [type, config.countKey])
+
+  /* =======================
+     ⑤ 加载图片
+  ======================= */
   const loadImages = useCallback(() => {
-    if (loading || !countsLoaded || maxCount === 0) return
+    if (loading || !countsLoaded) return
 
     const startId = (page - 1) * IMAGES_PER_PAGE + 1
     const endId = Math.min(page * IMAGES_PER_PAGE, maxCount)
-
     if (startId > maxCount) return
 
     setLoading(true)
@@ -101,118 +142,92 @@ export function ImageGallery({ type }: ImageGalleryProps) {
     for (let i = startId; i <= endId; i++) {
       newImages.push({
         id: i,
-        url: `${baseUrl}/${i}.webp`,
+        url: `${config.baseUrl}/${i}.jpg`,
       })
     }
 
     setImages((prev) => [...prev, ...newImages])
-    setPage((prev) => prev + 1)
+    setPage((p) => p + 1)
     setLoading(false)
-  }, [page, loading, type, baseUrl, maxCount, countsLoaded])
+  }, [page, loading, countsLoaded, maxCount, config.baseUrl])
 
+  /* =======================
+     ⑥ 切换类型重置
+  ======================= */
   useEffect(() => {
     setImages([])
     setPage(1)
-    setLoading(false)
     initialLoadDone.current = false
   }, [type])
 
   useEffect(() => {
-    if (countsLoaded && maxCount > 0 && !initialLoadDone.current && images.length === 0) {
+    if (countsLoaded && !initialLoadDone.current) {
       initialLoadDone.current = true
       loadImages()
     }
-  }, [countsLoaded, maxCount, images.length, loadImages])
+  }, [countsLoaded, loadImages])
 
+  /* =======================
+     ⑦ 无限滚动
+  ======================= */
   useEffect(() => {
-    if (observerRef.current) {
-      observerRef.current.disconnect()
-    }
+    observerRef.current?.disconnect()
 
     observerRef.current = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting && !loading && (page - 1) * IMAGES_PER_PAGE < maxCount) {
-          loadImages()
-        }
+        if (entries[0].isIntersecting && !loading) loadImages()
       },
       { threshold: 0.5 },
     )
 
-    if (loadMoreRef.current) {
-      observerRef.current.observe(loadMoreRef.current)
-    }
+    loadMoreRef.current && observerRef.current.observe(loadMoreRef.current)
 
-    return () => {
-      if (observerRef.current) {
-        observerRef.current.disconnect()
-      }
-    }
-  }, [loading, page, loadImages, maxCount])
+    return () => observerRef.current?.disconnect()
+  }, [loadImages, loading])
 
+  /* =======================
+     ⑧ Fancybox
+  ======================= */
   useEffect(() => {
-    if (galleryContainerRef.current) {
-      Fancybox.bind(
-        galleryContainerRef.current,
-        "[data-fancybox]",
-        {
-          Thumbs: {
-            type: "classic",
-          },
-          Toolbar: {
-            display: {
-              left: ["infobar"],
-              middle: ["zoomIn", "zoomOut", "toggle1to1", "rotateCCW", "rotateCW", "flipX", "flipY"],
-              right: ["slideshow", "fullscreen", "download", "thumbs", "close"],
-            },
-          },
-        } as any,
-      )
-    }
+    if (!galleryContainerRef.current) return
 
-    return () => {
-      if (galleryContainerRef.current) {
-        Fancybox.unbind(galleryContainerRef.current)
-      }
-    }
+    Fancybox.bind(galleryContainerRef.current, "[data-fancybox]", {
+      Thumbs: { type: "classic" },
+    } as any)
+
+    return () => Fancybox.unbind(galleryContainerRef.current)
   }, [images])
 
-  const renderMasonryLayout = () => {
+  /* =======================
+     ⑨ 瀑布流渲染
+  ======================= */
+  const renderMasonry = () => {
     const columnCount = getColumnCount()
     const columns: ImageItem[][] = Array.from({ length: columnCount }, () => [])
 
-    images.forEach((image, index) => {
-      const columnIndex = index % columnCount
-      columns[columnIndex].push(image)
-    })
+    images.forEach((img, i) => columns[i % columnCount].push(img))
 
     return (
-      <div className="flex gap-4 w-full" ref={containerRef}>
-        {columns.map((column, columnIndex) => (
-          <div key={columnIndex} className="flex flex-col gap-4 flex-1">
-            {column.map((image) => (
-              <div key={`${type}-${image.id}`} className="group relative overflow-hidden rounded-lg bg-muted">
-                <a
-                  data-fancybox="gallery"
-                  href={image.url}
-                  data-caption={`#${image.id}`}
-                  className="w-full cursor-zoom-in block"
-                >
+      <div className="flex gap-4">
+        {columns.map((col, i) => (
+          <div key={i} className="flex flex-col gap-4 flex-1">
+            {col.map((img) => (
+              <div
+                key={`${type}-${img.id}`}
+                className={`group overflow-hidden rounded-lg bg-muted ${
+                  config.aspect ?? ""
+                }`}
+              >
+                <a data-fancybox="gallery" href={img.url}>
                   <Image
-                    src={image.url || "/placeholder.svg"}
-                    alt={`Gallery image ${image.id}`}
+                    src={img.url}
+                    alt=""
                     width={800}
                     height={600}
-                    className="w-full h-auto object-cover transition-transform duration-500 group-hover:scale-105"
-                    sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                     loading="lazy"
                   />
                 </a>
-
-                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors duration-300 pointer-events-none" />
-
-                <div className="absolute top-3 right-3 bg-background/90 backdrop-blur-sm text-foreground text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
-                  #{image.id}
-                </div>
               </div>
             ))}
           </div>
@@ -222,19 +237,12 @@ export function ImageGallery({ type }: ImageGalleryProps) {
   }
 
   return (
-    <div className="w-full" ref={galleryContainerRef}>
-      {renderMasonryLayout()}
+    <div ref={galleryContainerRef}>
+      {renderMasonry()}
 
-      <div ref={loadMoreRef} className="flex justify-center py-8">
-        {loading && (
-          <div className="flex items-center gap-2 text-muted-foreground">
-            <div className="h-5 w-5 animate-spin rounded-full border-2 border-muted-foreground border-t-transparent" />
-            <span>加载中...</span>
-          </div>
-        )}
-        {(page - 1) * IMAGES_PER_PAGE >= maxCount && !loading && maxCount > 0 && (
-          <p className="text-muted-foreground text-sm">已加载全部 {maxCount} 张图片</p>
-        )}
+      <div ref={loadMoreRef} className="py-10 text-center text-muted-foreground">
+        {loading && "加载中..."}
+        {!loading && images.length >= maxCount && `已加载全部 ${maxCount} 张`}
       </div>
     </div>
   )
