@@ -5,13 +5,13 @@ import { ImageGallery } from "@/components/image-gallery"
 import { ModeToggle } from "@/components/mode-toggle"
 
 // ① 统一定义 Gallery 类型
-type GalleryType = "horizontal" | "vertical" | "Genshin Impact" | "avatar" | "mia" | "しとね"
+type GalleryType = "horizontal" | "vertical" | "Genshin" | "avatar" | "mia" | "しとね"
 
 // ② 类型配置（以后只改这里）
 const galleryTypes: { key: GalleryType; label: string }[] = [
   { key: "horizontal", label: "横屏" },
   { key: "vertical", label: "竖屏" },
-  { key: "Genshin Impact", label: "原神" },
+  { key: "Genshin", label: "原神" },
   { key: "avatar", label: "头像" },
   { key: "mia", label: "mia" },
   { key: "しとね", label: "しとね" },

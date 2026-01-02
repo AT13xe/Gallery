@@ -8,7 +8,7 @@ import "@fancyapps/ui/dist/fancybox/fancybox.css"
 /* =======================
    ① 类型统一定义
 ======================= */
-export type GalleryType = "horizontal" | "vertical" | "Genshin Impact" | "avatar" | "mia" | "しとね"
+export type GalleryType = "horizontal" | "vertical" | "Genshin" | "avatar" | "mia" | "しとね"
 
 interface ImageGalleryProps {
   type: GalleryType
@@ -51,7 +51,7 @@ const TYPE_CONFIG: Record<
     baseUrl: "https://img.at13xe.top/ri/v",
     countKey: "v",
   },
-  Genshin Impact: {
+  Genshin: {
     baseUrl: "https://img.at13xe.top/ri/ys",
     countKey: "ys",
   },
