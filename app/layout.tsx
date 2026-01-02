@@ -8,10 +8,10 @@ const _geist = Geist({ subsets: ["latin"] });
 const _geistMono = Geist_Mono({ subsets: ["latin"] });
 
 const siteAvatarUrl =
-  'https://q2.qlogo.cn/headimg_dl?dst_uin=2726730791&spec=0'
+  'https://q2.qlogo.cn/headimg_dl?dst_uin=3639191908&spec=0'
 
 export const metadata: Metadata = {
-  title: 'AcoFork PicGallery',
+  title: 'AT13xe PicGallery',
   description: 'Created with v0',
   generator: 'v0.app',
   icons: {
