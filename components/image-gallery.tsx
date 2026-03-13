@@ -98,7 +98,7 @@ export function ImageGallery({ type }: ImageGalleryProps) {
      ④ 获取最大数量
   ======================= */
   useEffect(() => {
-    const fallbackCounts = { h: 788, v: 995, ys: 744, tx: 893, mia:248, a:611 }
+    const fallbackCounts = { h: 1074, v: 4003, ys: 1056, tx: 893, mia: 391, a: 764 }
 
     if (window.__picCounts) {
       setMaxCount(window.__picCounts[config.countKey] ?? fallbackCounts[config.countKey])
@@ -142,7 +142,7 @@ export function ImageGallery({ type }: ImageGalleryProps) {
     for (let i = startId; i <= endId; i++) {
       newImages.push({
         id: i,
-        url: `${config.baseUrl}/${i}.jpg`,
+        url: `${config.baseUrl}/${i}.webp`,
       })
     }
 
